@@ -1,5 +1,16 @@
 # Contributing to Box3D
 
+## This downstream fork
+
+This checkout is `waskosky/box3d`. Validated fixes may be maintained here without
+waiting for upstream approval. Keep changes focused, preserve attribution, and
+run the native tests. The upstream contribution process below applies to
+submissions to [erincatto/box3d](https://github.com/erincatto/box3d), not to
+maintaining this fork. Do not submit upstream on another contributor's behalf
+without their authorization.
+
+## Original upstream contribution process
+
 This project is open source under the [MIT License](LICENSE). Please read this document
 before opening a pull request — **PRs that skip these steps will be closed.**
 

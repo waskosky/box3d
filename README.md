@@ -1,11 +1,40 @@
 # Box3D
 
-[![Build Status](https://github.com/erincatto/box3d/actions/workflows/build.yml/badge.svg)](https://github.com/erincatto/box3d/actions)
-[![CLA assistant](https://cla-assistant.io/readme/badge/erincatto/box3d)](https://cla-assistant.io/erincatto/box3d)
+[![Build Status](https://github.com/waskosky/box3d/actions/workflows/build.yml/badge.svg)](https://github.com/waskosky/box3d/actions)
 
 ![Box3D Logo](https://box2d.org/images/logo.svg)
 
 Box3D is a 3D physics engine for games.
+
+## Maintained downstream fork
+
+This is [waskosky/box3d](https://github.com/waskosky/box3d), a maintenance fork of
+[Erin Catto's Box3D](https://github.com/erincatto/box3d). Upstream remains the
+original project; its authorship and MIT license are unchanged.
+
+We maintain tested native fixes here without waiting for upstream acceptance.
+`main` is our baseline; consumers should pin a tested full commit from this fork.
+Upstream updates are reviewed and integrated while preserving our fixes and tests.
+This is independent of any application or engine adapter.
+
+The first downstream correction fixes the CCD impact-to-response handoff for
+small, fast bodies against thin hulls, meshes and heightfields. It is native source,
+not a consumer-side patch script, and is covered by `CCDResponseTest` (774 cases).
+Impact timing and deterministic trajectory goldens differ from uncorrected
+upstream builds; old recordings/replays are not promised to match. A corrected
+source build does not update previously embedded binaries or export templates.
+
+Build the native tests with samples disabled:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBOX3D_SAMPLES=OFF
+cmake --build build --parallel
+./build/bin/test CCDResponseTest
+./build/bin/test
+```
+
+For multi-configuration generators, use the appropriate configuration subdirectory.
+The documentation below describes the shared Box3D API and upstream project.
 
 [![Introducing Box3D](https://img.youtube.com/vi/jr_Fzl2XwKU/maxresdefault.jpg)](https://www.youtube.com/watch?v=jr_Fzl2XwKU)
 
@@ -114,8 +143,8 @@ I recommend to use FetchContent:
 ```cmake
 include(FetchContent)
 FetchContent_Declare(box3d
-  GIT_REPOSITORY https://github.com/erincatto/box3d.git
-  GIT_TAG v0.1.0)
+      GIT_REPOSITORY https://github.com/waskosky/box3d.git
+      GIT_TAG main) # Pin a tested full commit for reproducible consumer builds.
 FetchContent_MakeAvailable(box3d)
 
 target_link_libraries(my_app PRIVATE box3d::box3d)
@@ -161,7 +190,9 @@ The user manual lives in [`docs/`](docs/) and is built with Doxygen. Enable the 
 
 ## Contributing
 
-Pull requests are currently disabled. Instead, please file an issue for bugs or feature requests. For support, please visit the Discord server.
+For this fork, see [CONTRIBUTING.md](CONTRIBUTING.md). Native fixes can be
+maintained here independently. Upstream currently requests an issue/discussion
+before any invited contribution; that process is separate from our releases.
 
 ## Giving feedback
 
@@ -175,17 +206,13 @@ Box3D is developed by Erin Catto and uses the [MIT license](https://en.wikipedia
 
 Support development of Box3D through [Github Sponsors](https://github.com/sponsors/erincatto).
 
-Please consider starring this repository and subscribing to my [YouTube channel](https://www.youtube.com/@erin_catto).
+Please consider starring the original project and subscribing to
+[Erin Catto's YouTube channel](https://www.youtube.com/@erin_catto).
 
 ## LLM Usage
 
-LLMs are used in the following areas:
-
-- unit tests
-- samples app
-- migrating code between Box2D and Box3D
-- build configuration
-- code reviews
-- benchmarking
-
-Elsewhere all code is developed and written by me. I take responsibility for every line of code in Box2D/3D.
+This fork includes AI-assisted changes and tests. They must be reviewed and
+validated like any other change; assistance does not replace physics regression
+coverage or qualification. Erin Catto's upstream authorship and
+[LLM policy](https://github.com/erincatto/box3d#llm-usage) apply to the original
+project, not to authorship of this fork's additional changes.

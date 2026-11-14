@@ -2136,6 +2136,9 @@ static bool b3MeshTimeOfImpactFcn( b3Vec3 a, b3Vec3 b, b3Vec3 c, int triangleInd
 	b3Vec3 triangle[3] = { a, b, c };
 	toiContext->toiInput.proxyA.points = triangle;
 	toiContext->toiInput.proxyA.count = 3;
+	// Solid mesh/heightfield manifolds subtract this offset from separation.
+	// Include it in the sweep so the handoff is separated in solver space too.
+	toiContext->toiInput.proxyA.radius = toiContext->isSensor ? 0.0f : B3_MESH_REST_OFFSET;
 
 	b3TOIOutput output = b3TimeOfImpact( &toiContext->toiInput );
 

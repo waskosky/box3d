@@ -1703,10 +1703,13 @@ b3TOIOutput b3TimeOfImpact( const b3TOIInput* input )
 	int maxPushBackIterations = proxyA.count + proxyB.count;
 	float tMax = input->maxFraction;
 
-	// Setup target distance and tolerance
+	// Stop separated so the next step uses a hard speculative contact before
+	// integrating positions. Starting overlapped would use a soft constraint,
+	// allowing the remaining impact velocity to push small shapes through thin
+	// geometry. The tolerance below is smaller than this positive surface gap.
 	float linearSlop = B3_LINEAR_SLOP;
 	float totalRadius = proxyA.radius + proxyB.radius;
-	float target = b3MaxFloat( linearSlop, totalRadius - linearSlop );
+	float target = totalRadius + linearSlop;
 	float tolerance = 0.25f * linearSlop;
 	B3_ASSERT( target > tolerance );
 
