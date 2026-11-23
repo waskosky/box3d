@@ -1654,14 +1654,27 @@ void b3Body_SetType( b3BodyId bodyId, b3BodyType type )
 	bool wakeBodies = false;
 	b3DestroyBodyContacts( world, body, wakeBodies );
 
-	// Stage 3: wake this body (does nothing if body is static), otherwise it will also wake
-	// all bodies in the same sleeping solver set.
+	// Stage 3: wake this body and its joint partners before transferring any joint.
+	// A static body can connect independent sleeping islands. Waking the next island
+	// must see a consistent constraint graph, not a partially transferred one.
 	b3WakeBody( world, body );
+	int jointKey = body->headJointKey;
+	while ( jointKey != B3_NULL_INDEX )
+	{
+		const b3Joint* joint = b3Array_Get( world->joints, jointKey >> 1 );
+		int edgeIndex = jointKey & 1;
+		jointKey = joint->edges[edgeIndex].nextKey;
+		if ( joint->setIndex != b3_disabledSet )
+		{
+			b3Body* other = b3Array_Get( world->bodies, joint->edges[edgeIndex ^ 1].bodyId );
+			b3WakeBody( world, other );
+		}
+	}
 
 	// Stage 4: move joints to temporary storage
 	b3SolverSet* staticSet = b3GetSolverSet( world, b3_staticSet );
 
-	int jointKey = body->headJointKey;
+	jointKey = body->headJointKey;
 	while ( jointKey != B3_NULL_INDEX )
 	{
 		int jointId = jointKey >> 1;
@@ -1675,14 +1688,6 @@ void b3Body_SetType( b3BodyId bodyId, b3BodyType type )
 		{
 			continue;
 		}
-
-		// Wake attached bodies. The b3WakeBody call above does not wake bodies
-		// attached to a static body. But it is necessary because the body may have
-		// no joints.
-		b3Body* bodyA = b3Array_Get( world->bodies, joint->edges[0].bodyId );
-		b3Body* bodyB = b3Array_Get( world->bodies, joint->edges[1].bodyId );
-		b3WakeBody( world, bodyA );
-		b3WakeBody( world, bodyB );
 
 		// Remove joint from island
 		b3UnlinkJoint( world, joint );

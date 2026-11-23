@@ -643,8 +643,67 @@ static int IsotropicInertiaTolerance( void )
 	return 0;
 }
 
+// Two bodies attached to a static hub may sleep in different islands. Changing
+// the hub's type must preserve both constraints without injecting any motion.
+static int ChangeJointedBodyType( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId world = b3CreateWorld( &worldDef );
+	b3BodyDef bodyDef = b3DefaultBodyDef();
+	bodyDef.type = b3_dynamicBody;
+	b3BodyId hub = b3CreateBody( world, &bodyDef );
+	b3ShapeDef shapeDef = b3DefaultShapeDef();
+	shapeDef.density = 1.0f;
+	b3Sphere sphere = { b3Vec3_zero, 0.35f };
+	b3CreateSphereShape( hub, &shapeDef, &sphere );
+
+	b3BodyId sides[2];
+	b3Vec3 anchors[2] = { { -1, 0, 0 }, { 1, 0, 0 } };
+	for ( int i = 0; i < 2; ++i )
+	{
+		bodyDef.position.x = anchors[i].x;
+		sides[i] = b3CreateBody( world, &bodyDef );
+		b3CreateSphereShape( sides[i], &shapeDef, &sphere );
+		b3SphericalJointDef joint = b3DefaultSphericalJointDef();
+		joint.base.bodyIdA = hub;
+		joint.base.bodyIdB = sides[i];
+		joint.base.localFrameA.p = anchors[i];
+		b3CreateSphericalJoint( world, &joint );
+	}
+
+	const float dt = 1.0f / 60.0f;
+	b3Body_SetType( hub, b3_staticBody );
+	for ( int i = 0; i < 120; ++i )
+	{
+		b3World_Step( world, dt, 4 );
+	}
+	ENSURE( !b3Body_IsAwake( sides[0] ) && !b3Body_IsAwake( sides[1] ) );
+	b3Body_SetType( hub, b3_dynamicBody );
+	b3World_Step( world, dt, 4 );
+	ENSURE( b3Body_GetJointCount( hub ) == 2 );
+	for ( int i = 0; i < 2; ++i )
+	{
+		ENSURE( b3Length( b3Body_GetLinearVelocity( sides[i] ) ) < 0.001f );
+	}
+	b3Body_ApplyLinearImpulseToCenter( hub, (b3Vec3){ 1, 0, 0 }, true );
+	for ( int i = 0; i < 20; ++i )
+	{
+		b3World_Step( world, dt, 4 );
+	}
+	ENSURE( b3Body_GetPosition( hub ).x > 0.1f );
+	for ( int i = 0; i < 2; ++i )
+	{
+		b3Pos anchor = b3Body_GetWorldPoint( hub, anchors[i] );
+		ENSURE( b3Length( b3SubPos( b3Body_GetPosition( sides[i] ), anchor ) ) < 0.02f );
+	}
+	b3DestroyWorld( world );
+	return 0;
+}
+
 int BodyTest( void )
 {
+	RUN_SUBTEST( ChangeJointedBodyType );
 	RUN_SUBTEST( FarSingleSphereMass );
 	RUN_SUBTEST( FarCubeSphereMass );
 	RUN_SUBTEST( DeferredMassExtents );
