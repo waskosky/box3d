@@ -701,9 +701,53 @@ static int ChangeJointedBodyType( void )
 	return 0;
 }
 
+static int StaticOnlyShapesKeepBodyType( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = (b3Vec3){ 0, -10, 0 };
+	b3WorldId world = b3CreateWorld( &worldDef );
+	b3BodyDef bodyDef = b3DefaultBodyDef();
+	b3ShapeDef shapeDef = b3DefaultShapeDef();
+	b3BodyId scenery[2];
+	scenery[0] = b3CreateBody( world, &bodyDef );
+	b3CompoundSphereDef child = { .sphere = { b3Vec3_zero, 0.5f }, .material = b3DefaultSurfaceMaterial() };
+	b3CompoundDef compoundDef = { .spheres = &child, .sphereCount = 1 };
+	b3CompoundData* compound = b3CreateCompound( &compoundDef );
+	ENSURE( B3_IS_NON_NULL( b3CreateBakedCompoundShape( scenery[0], &shapeDef, compound ) ) );
+	scenery[1] = b3CreateBody( world, &bodyDef );
+	b3HeightFieldData* field = b3CreateGrid( 3, 3, b3Vec3_one, false );
+	ENSURE( B3_IS_NON_NULL( b3CreateHeightFieldShape( scenery[1], &shapeDef, field ) ) );
+
+	bodyDef.type = b3_dynamicBody;
+	bodyDef.position = (b3Pos){ 10, 5, 0 };
+	b3BodyId ball = b3CreateBody( world, &bodyDef );
+	b3Sphere sphere = { b3Vec3_zero, 0.25f };
+	b3CreateSphereShape( ball, &shapeDef, &sphere );
+
+	// Rejecting a change to scenery must not interrupt an unrelated body's free fall.
+	const b3BodyType targets[] = { b3_kinematicBody, b3_dynamicBody };
+	for ( int i = 0; i < ARRAY_COUNT( scenery ); ++i )
+	{
+		for ( int j = 0; j < ARRAY_COUNT( targets ); ++j )
+		{
+			b3Pos before = b3Body_GetPosition( ball );
+			b3Body_SetType( scenery[i], targets[j] );
+			ENSURE( b3Body_GetType( scenery[i] ) == b3_staticBody );
+			b3World_Step( world, 1.0f / 60.0f, 4 );
+			ENSURE( b3Body_GetPosition( ball ).y < before.y );
+		}
+	}
+
+	b3DestroyWorld( world );
+	b3DestroyHeightField( field );
+	b3DestroyCompound( compound );
+	return 0;
+}
+
 int BodyTest( void )
 {
 	RUN_SUBTEST( ChangeJointedBodyType );
+	RUN_SUBTEST( StaticOnlyShapesKeepBodyType );
 	RUN_SUBTEST( FarSingleSphereMass );
 	RUN_SUBTEST( FarCubeSphereMass );
 	RUN_SUBTEST( DeferredMassExtents );

@@ -1571,9 +1571,8 @@ b3BodyType b3Body_GetType( b3BodyId bodyId )
 // Revised steps:
 // 1 Skip disabled bodies
 // 2 Destroy all contacts on the body
-// 3 Wake the body
+// 3 Wake the body and all joint partners
 // 4 For all joints attached to the body
-//  - wake attached bodies
 //  - remove from island
 //  - move to static set temporarily
 // 5 Change the body type and transfer the body
@@ -1601,13 +1600,11 @@ void b3Body_SetType( b3BodyId bodyId, b3BodyType type )
 
 	B3_REC( world, BodySetType, bodyId, (int32_t)type );
 
-	world->locked = true;
 	b3Body* body = b3GetBodyFullId( world, bodyId );
 
 	b3BodyType originalType = body->type;
 	if ( originalType == type )
 	{
-		world->locked = false;
 		return;
 	}
 
@@ -1619,13 +1616,15 @@ void b3Body_SetType( b3BodyId bodyId, b3BodyType type )
 			b3Shape* shape = b3Array_Get( world->shapes, shapeId );
 			if ( shape->type == b3_compoundShape || shape->type == b3_heightShape )
 			{
-				// Setting the body type is not supported for bodies with compound shapes
+				// Baked compounds and height fields must stay on static bodies.
 				return;
 			}
 
 			shapeId = shape->nextShapeId;
 		}
 	}
+
+	world->locked = true;
 
 	// Stage 1: skip disabled bodies
 	if ( body->setIndex == b3_disabledSet )

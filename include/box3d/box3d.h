@@ -554,6 +554,7 @@ B3_API b3BodyType b3Body_GetType( b3BodyId bodyId );
 
 /// Change the body type. This is an expensive operation. This automatically updates the mass
 /// properties regardless of the automatic mass setting.
+/// Bodies with a baked compound or height field shape stay static; requests for another type are ignored.
 B3_API void b3Body_SetType( b3BodyId bodyId, b3BodyType type );
 
 /// Set the body name.
