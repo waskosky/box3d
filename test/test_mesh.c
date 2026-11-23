@@ -562,6 +562,62 @@ static int MeshEdgeAngles( void )
 	return 0;
 }
 
+// A stationary cube need not leave its world-space AABB when a moving mesh reaches it.
+// Test both an elevator and a tilting platform, with the same geometry in each case.
+static int MeshMovingPlatform( void )
+{
+	bool carried = true;
+	for ( int tilt = 0; tilt < 2; ++tilt )
+	{
+		b3WorldDef worldDef = b3DefaultWorldDef();
+		worldDef.gravity = b3Vec3_zero;
+		b3WorldId world = b3CreateWorld( &worldDef );
+		b3MeshData* mesh = b3CreateGridMesh( 8, 8, 1.0f, 0, true );
+		b3ShapeDef shapeDef = b3DefaultShapeDef();
+		b3BodyDef bodyDef = b3DefaultBodyDef();
+		bodyDef.type = b3_kinematicBody;
+		b3BodyId platform = b3CreateBody( world, &bodyDef );
+		b3CreateMeshShape( platform, &shapeDef, mesh, b3Vec3_one );
+
+		bodyDef.type = b3_dynamicBody;
+		bodyDef.enableSleep = false;
+		bodyDef.position = (b3Pos){ 2.0f, 0.8f, 0.0f };
+		b3BodyId cube = b3CreateBody( world, &bodyDef );
+		b3BoxHull hull = b3MakeBoxHull( 0.5f, 0.5f, 0.5f );
+		b3CreateHullShape( cube, &shapeDef, &hull.base );
+
+		const float dt = 1.0f / 60.0f;
+		b3World_Step( world, dt, 4 );
+		for ( int i = 1; i <= 60; ++i )
+		{
+			b3WorldTransform target = b3WorldTransform_identity;
+			if ( tilt )
+			{
+				target.q = b3MakeQuatFromAxisAngle( (b3Vec3){ 0, 0, 1 }, 0.5f * i * dt );
+			}
+			else
+			{
+				target.p.y = 2.0f * i * dt;
+			}
+			b3Body_SetTargetTransform( platform, target, dt, true );
+			b3World_Step( world, dt, 4 );
+		}
+
+		b3Pos position = b3Body_GetPosition( cube );
+		float minimumY = tilt ? 1.15f : 2.45f;
+		if ( !( position.y > minimumY ) )
+		{
+			printf( "  moving mesh (%s): cube y=%g, expected above %g\n", tilt ? "tilt" : "lift", (double)position.y,
+					(double)minimumY );
+			carried = false;
+		}
+		b3DestroyWorld( world );
+		b3DestroyMesh( mesh );
+	}
+	ENSURE( carried );
+	return 0;
+}
+
 // A wide box sliding over a fine grid sits on hundreds of flat internal edges. With no friction
 // any manifold off the face normal is a ghost that slows or lifts the box.
 static int WideHullSlide( b3Vec3 meshScale )
@@ -1357,6 +1413,7 @@ int MeshTest( void )
 	RUN_SUBTEST( MeshClockWiseIgnored );
 	RUN_SUBTEST( MeshClockWiseStrideWeld );
 	RUN_SUBTEST( MeshCreators );
+	RUN_SUBTEST( MeshMovingPlatform );
 	RUN_SUBTEST( MeshWideHullSlide );
 	RUN_SUBTEST( MeshManyTriangles );
 	RUN_SUBTEST( MeshEdgeAngles );

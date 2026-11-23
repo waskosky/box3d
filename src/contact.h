@@ -85,7 +85,7 @@ typedef struct b3ContactEdge
 typedef struct b3MeshContact
 {
 	b3Array( b3TriangleCache ) triangleCache;
-	b3AABB queryBounds;
+	b3AABB localQueryBounds;
 } b3MeshContact;
 
 typedef struct b3ConvexContact
